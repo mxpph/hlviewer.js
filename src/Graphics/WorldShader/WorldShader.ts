@@ -16,7 +16,8 @@ void main(void) {
   vec4 diffuseColor = texture2D(diffuse, vTexCoord);
   vec4 lightColor = texture2D(lightmap, vLightmapCoord);
 
-  gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a * opacity);
+  // gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a * opacity);
+  gl_FragColor = vec4(pow(diffuseColor.rgb * lightColor.rgb, vec3(0.85)), diffuseColor.a * opacity);
 }`
 
 const vertexSrc = `#ifdef GL_ES

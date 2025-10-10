@@ -1,3 +1,5 @@
+import { HlkzFrame } from "../Parsers/Hlkz"
+
 export class ReplayState {
   cameraPos: any[]
   cameraRot: any[]
@@ -32,6 +34,16 @@ export class ReplayState {
         break
       }
     }
+  }
+
+  feedHlkzFrame(frame: HlkzFrame) {
+    this.cameraPos[0] = frame.x
+    this.cameraPos[1] = frame.y
+    this.cameraPos[2] = frame.z
+
+    this.cameraRot[0] = frame.angle_x
+    this.cameraRot[1] = frame.angle_y
+    this.cameraRot[2] = frame.angle_z
   }
 
   clone() {

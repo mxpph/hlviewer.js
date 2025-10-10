@@ -5,10 +5,11 @@ import { extname } from './Util'
 import type { Config } from './Config'
 import { Tga } from './Parsers/Tga'
 import { Wad } from './Parsers/Wad'
-import { Replay } from './Replay/Replay'
+import { Replay, ReplayType } from './Replay/Replay'
 import { Sprite } from './Parsers/Sprite'
 import { xhr, type ProgressCallback } from './Xhr'
 import { BspParser } from './Parsers/BspParser'
+import { HlkzReplay } from './Replay/HlkzReplay'
 
 enum LoadItemStatus {
   Loading = 1,
@@ -91,6 +92,7 @@ export class Loader {
   config: Config
 
   replay?: LoadItemReplay
+  replayType = ReplayType.DEMO
   map?: LoadItemBsp
   skies: LoadItemSky[]
   wads: LoadItemWad[]
@@ -161,7 +163,9 @@ export class Loader {
 
   load(name: string) {
     const extension = extname(name)
-    if (extension === '.dem') {
+    if (extension === '.dat') {
+      this.loadHlkzReplay(name)
+    } else if (extension === '.dem') {
       this.loadReplay(name)
     } else if (extension === '.bsp') {
       this.loadMap(name)
@@ -170,36 +174,36 @@ export class Loader {
     }
   }
 
-  async loadReplay(name: string) {
-    this.replay = new LoadItemReplay(name)
-    this.events.emit('loadstart', this.replay)
-
-    const progressCallback: ProgressCallback = (_1, progress) => {
-      if (this.replay) {
-        this.replay.progress = progress
-      }
-
-      this.events.emit('progress', this.replay)
+  async loadHlkzReplay(name: string) {
+    // Format is mapName_X_Y_Z_(pure|pro|nub).dat where X:Y:Z is SteamID
+    this.replayType = ReplayType.HLKZ
+    const split = name.substring(0, name.length - 4).split('_')
+    if (split.length < 5) {
+      return
     }
+    const runType = split[split.length - 1]
+    const mapName = split.slice(0, split.length - 4).join('_')
 
-    const replayPath = this.config.getReplaysPath()
-    const buffer = await xhr(`${replayPath}/${name}`, {
-      method: 'GET',
-      isBinary: true,
-      progressCallback
-    }).catch((err: any) => {
-      if (this.replay) {
-        this.replay.error()
-      }
-      this.events.emit('error', err, this.replay)
-    })
+    const buffer = await this.setupReplay(name)
+    if (this.replay!.isError()) {
+      return
+    }
+    this.loadMap(`${mapName}.bsp`)
+    const replay = new HlkzReplay(runType, mapName, buffer)
+    this.replay!.done(replay)
+    this.events.emit('load', this.replay)
+    this.checkStatus()
+  }
 
-    if (this.replay.isError()) {
+  async loadReplay(name: string) {
+    const buffer = await this.setupReplay(name)
+
+    if (this.replay!.isError()) {
       return
     }
 
     const replay = Replay.parseIntoChunks(buffer)
-    this.replay.done(replay)
+    this.replay!.done(replay)
 
     this.loadMap(`${replay.maps[0].name}.bsp`)
 
@@ -212,6 +216,32 @@ export class Loader {
 
     this.events.emit('load', this.replay)
     this.checkStatus()
+  }
+
+  private async setupReplay(name: string) {
+    this.replay = new LoadItemReplay(name)
+    this.events.emit('loadstart', this.replay)
+
+    const progressCallback: ProgressCallback = (_1, progress) => {
+      if (this.replay) {
+        this.replay.progress = progress
+      }
+
+      this.events.emit('progress', this.replay)
+    }
+
+    const replayPath = this.config.getReplaysPath()
+    const buffer: ArrayBuffer = await xhr(`${replayPath}/${name}`, {
+      method: 'GET',
+      isBinary: true,
+      progressCallback
+    }).catch((err: any) => {
+      if (this.replay) {
+        this.replay.error()
+      }
+      this.events.emit('error', err, this.replay)
+    })
+    return buffer
   }
 
   async loadMap(name: string) {
