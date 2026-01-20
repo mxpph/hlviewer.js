@@ -26,12 +26,12 @@ export class Hlkz {
     return hlkzFrames
   }
 
-  static readFrame(r: Reader, initialTime?: number): HlkzFrame {
+  private static readFrame(r: Reader, initialTime?: number): HlkzFrame {
     const frame: HlkzFrame = {
       gametime: r.f() - (initialTime ?? 0),
       x: r.f(),
       y: r.f(),
-      z: r.f(),
+      z: r.f() - 72 / 2 + 64,
       angle_x: r.f(),
       angle_y: r.f(),
       angle_z: r.f(),

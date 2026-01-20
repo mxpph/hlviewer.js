@@ -175,14 +175,14 @@ export class Loader {
   }
 
   async loadHlkzReplay(name: string) {
-    // Format is mapName_X_Y_Z_(pure|pro|nub).dat where X:Y:Z is SteamID
+    // Format is mapName_X_Y_Z_(pure|pro|nub)_id.dat where X:Y:Z is SteamID
     this.replayType = ReplayType.HLKZ
-    const split = name.substring(0, name.length - 4).split('_')
-    if (split.length < 5) {
+    const split = name.split('_')
+    if (split.length < 6) {
       return
     }
-    const runType = split[split.length - 1]
-    const mapName = split.slice(0, split.length - 4).join('_')
+    const runType = split[split.length - 2]
+    const mapName = split.slice(0, split.length - 5).join('_')
 
     const buffer = await this.setupReplay(name)
     if (this.replay!.isError()) {
