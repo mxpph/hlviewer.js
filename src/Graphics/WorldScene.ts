@@ -524,7 +524,6 @@ export class WorldScene {
       const modelIndex = Number.parseInt(entity.model.substr(1))
       const model = this.sceneInfo.models[modelIndex]
       if (model) {
-        const angles = entity.angles || [0, 0, 0]
         const origin = entity.origin
           ? vec3.fromValues(entity.origin[0], entity.origin[1], entity.origin[2])
           : vec3.create()
@@ -533,10 +532,7 @@ export class WorldScene {
         // TODO: this seems to work, but needs further research
         mat4.identity(mmx)
         mat4.translate(mmx, mmx, origin)
-        // mat4.rotateY(mmx, mmx, (angles[0] * Math.PI) / 180) // dunno this
-        mat4.rotateZ(mmx, mmx, (angles[1] * Math.PI) / 180)
-        mat4.rotateX(this.modelMatrix, this.modelMatrix, (angles[2] * Math.PI) / 180)
-        shader.setModelMatrix(gl, this.modelMatrix)
+        shader.setModelMatrix(gl, mmx)
 
         for (let j = 0; j < model.faces.length; ++j) {
           const face = model.faces[j]
@@ -680,19 +676,14 @@ export class WorldScene {
       const modelIndex = Number.parseInt(entity.model.substr(1))
       const model = this.sceneInfo.models[modelIndex]
       if (model) {
-        const angles = entity.angles || [0, 0, 0]
         const origin = entity.origin || [0, 0, 0]
         origin[0] += model.origin[0]
         origin[1] += model.origin[1]
         origin[2] += model.origin[2]
-
         // TODO: this seems to work, but needs further research
         mat4.identity(mmx)
         mat4.translate(mmx, mmx, origin)
-        mat4.rotateZ(mmx, mmx, (angles[1] * Math.PI) / 180)
-        // mat4.rotateY(mmx, mmx, (angles[2] * Math.PI) / 180) // dunno this
-        mat4.rotateX(this.modelMatrix, this.modelMatrix, (angles[2] * Math.PI) / 180)
-        shader.setModelMatrix(gl, this.modelMatrix)
+        shader.setModelMatrix(gl, mmx)
 
         const renderMode = entity.rendermode || RenderMode.Normal
         switch (renderMode) {
