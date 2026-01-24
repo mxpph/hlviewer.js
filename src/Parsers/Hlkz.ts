@@ -11,6 +11,16 @@ export interface HlkzFrame {
   buttons: number
 }
 
+export class HlkzButtonConstants {
+  static BTN_JUMP = (1 << 1)
+  static BTN_DUCK = (1 << 2)
+  static BTN_FORWARD = (1 << 3)
+  static BTN_BACK = (1 << 4)
+  static BTN_USE = (1 << 5)
+  static BTN_MOVELEFT = (1 << 9)
+  static BTN_MOVERIGHT = (1 << 10)
+}
+
 export class Hlkz {
   static parse(buffer: ArrayBuffer): HlkzFrame[] {
     const r = new Reader(buffer)
@@ -27,16 +37,18 @@ export class Hlkz {
   }
 
   private static readFrame(r: Reader, initialTime?: number): HlkzFrame {
-    const frame: HlkzFrame = {
+    let frame: HlkzFrame = {
       gametime: r.f() - (initialTime ?? 0),
       x: r.f(),
       y: r.f(),
-      z: r.f() - 72 / 2 + 64,
+      z: r.f() + 28, // view height correction
       angle_x: r.f(),
       angle_y: r.f(),
       angle_z: r.f(),
       buttons: r.us()
     }
+    if (frame.buttons & HlkzButtonConstants.BTN_DUCK)
+      frame.z -= 36
     return frame
   }
 }
