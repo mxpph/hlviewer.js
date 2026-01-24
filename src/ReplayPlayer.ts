@@ -14,6 +14,11 @@ const updateGame = (game: Game, state: ReplayState) => {
   game.camera.rotation[2] = glMatrix.toRadian(state.cameraRot[2])
 }
 
+const updateGameAndButtons = (game: Game, state: ReplayState, events: EventEmitter, buttons: number) => {
+  updateGame(game, state);
+  events.emit('keyspressed', buttons)
+}
+
 export class ReplayPlayer {
   game: Game
   state: ReplayState
@@ -103,17 +108,19 @@ export class ReplayPlayer {
 
   private seekHlkz(t: number) {
     const frames: HlkzFrame[] = this.replay.data
+    let buttons = 0
     for (const [i, frame] of frames.entries()) {
       if (frame.gametime <= t) {
         this.state.feedHlkzFrame(frame)
       } else {
         this.currentTick = i
         this.currentTime = frame.gametime
+        buttons = frame.buttons
         break
       }
     }
     this.events.emit('seek', t)
-    updateGame(this.game, this.state)
+    updateGameAndButtons(this.game, this.state, this.events, buttons)
   }
 
   private seekDemo(t: number) {
@@ -174,18 +181,20 @@ export class ReplayPlayer {
 
     const frameData: HlkzFrame[] = this.replay.data
     const endTime = this.currentTime + dt * this.speed
+    let buttons = 0
 
     while (this.currentTick < frameData.length) {
       const frame = frameData[this.currentTick++]
       if (frame.gametime <= endTime) {
         this.state.feedHlkzFrame(frame)
         this.currentTime = frame.gametime
+        buttons = frame.buttons
       } else {
         break
       }
     }
 
-    updateGame(this.game, this.state)
+    updateGameAndButtons(this.game, this.state, this.events, buttons);
     this.currentTime = endTime
     if (this.currentTick == frameData.length) {
       this.stop()

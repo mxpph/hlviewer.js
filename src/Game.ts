@@ -101,6 +101,7 @@ export class Game {
   title = ''
   mode: PlayerMode
   pointerLocked = false
+  showKeys = true
 
   touch: Touch = new Touch()
   mouse: Mouse = new Mouse()
@@ -212,6 +213,11 @@ export class Game {
 
   getTitle() {
     return this.title
+  }
+
+  changeShowKeys() {
+    this.showKeys = !this.showKeys
+    this.events.emit('showkeyschange', this.showKeys)
   }
 
   onLoadAll = (loader: Loader) => {
