@@ -41,14 +41,14 @@ export class Hlkz {
       gametime: r.f() - (initialTime ?? 0),
       x: r.f(),
       y: r.f(),
-      z: r.f() + 28, // view height correction
-      angle_x: r.f(),
+      z: r.f() + 28, // view height difference from origin
+      angle_x: r.f() * -3, // weird pitch inversion and scaling correction
       angle_y: r.f(),
       angle_z: r.f(),
       buttons: r.us()
     }
     if (frame.buttons & HlkzButtonConstants.BTN_DUCK)
-      frame.z -= 36
+      frame.z -= 36 // ducking view height difference
     return frame
   }
 }
