@@ -48,7 +48,7 @@ export class Hlkz {
       buttons: r.us()
     }
     if (frame.buttons & HlkzButtonConstants.BTN_DUCK)
-      frame.z -= 36 // ducking view height difference
+      frame.z -= 16 // ducking view height difference
     return frame
   }
 }
