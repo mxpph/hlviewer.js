@@ -463,10 +463,10 @@ export class WorldScene {
 
     gl.activeTexture(gl.TEXTURE0)
 
+    const nonTriggerEntities = entities.filter(e => !e.classname.startsWith('trigger_'))
     const opaqueEntities = []
     const transparentEntities = []
-    for (let i = 1; i < entities.length; ++i) {
-      const e = entities[i]
+    for (const e of nonTriggerEntities) {
       if (e.model) {
         if (!e.rendermode || e.rendermode === RenderMode.Normal || e.rendermode === RenderMode.Solid) {
           if (e.model[0] === '*') {
