@@ -406,8 +406,8 @@ export class Game {
 
   onMouseMove = (e: MouseEvent) => {
     if (this.pointerLocked) {
-      this.mouse.delta[0] = e.movementX * 0.5 // mul 0.5 to lower sensitivity
-      this.mouse.delta[1] = e.movementY * 0.5 //
+      this.mouse.delta[0] = e.movementX
+      this.mouse.delta[1] = e.movementY
 
       this.mouse.position[0] = e.pageX
       this.mouse.position[1] = e.pageY
