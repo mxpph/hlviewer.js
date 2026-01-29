@@ -25,6 +25,14 @@ type SceneInfo = {
   models: ModelInfo[]
 }
 
+type Texture = {
+  name: string
+  width: number
+  height: number
+  data: Uint8Array
+  handle: WebGLTexture
+}
+
 export class WorldScene {
   static init(context: Context) {
     const shader = MainShader.init(context)
@@ -55,13 +63,7 @@ export class WorldScene {
     models: []
   }
   private bsp: Bsp | null = null
-  private textures: {
-    name: string
-    width: number
-    height: number
-    data: Uint8Array
-    handle: WebGLTexture
-  }[] = []
+  private textures: Texture[] = []
   private sprites: { [name: string]: Sprite } = {}
   private lightmap: {
     data: Uint8Array
@@ -94,7 +96,6 @@ export class WorldScene {
       'invisible',
       'skip',
       'trigger',
-      'sky',
       'fog'
     ]
 
@@ -500,18 +501,49 @@ export class WorldScene {
     }
   }
 
+  private drawModel(gl: WebGLRenderingContext, model: ModelInfo) {
+    for (let j = 0; j < model.faces.length; ++j) {
+      const face = model.faces[j]
+      const texture = this.textures[face.textureIndex]
+      // Draw sky model into depth buffer only to prevent drawing things behind the skybox
+      if (texture.name === 'sky') {
+        gl.colorMask(false, false, false, false)
+        const old = gl.getParameter(gl.DEPTH_WRITEMASK)
+        gl.depthMask(true)
+        gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+        gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
+        gl.colorMask(true, true, true, true)
+        gl.depthMask(old)
+      } else {
+        gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+        gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
+      }
+    }
+  }
+
+  private drawEntityModel(gl: WebGLRenderingContext, texture: Texture) {
+    if (texture.name === 'sky') {
+      gl.colorMask(false, false, false, false)
+      const old = gl.getParameter(gl.DEPTH_WRITEMASK)
+      gl.depthMask(true)
+      gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+      gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+      gl.colorMask(true, true, true, true)
+      gl.depthMask(old)
+    } else {
+      gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+      gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+    }
+  }
+
+
   private renderWorldSpawn() {
     const model = this.sceneInfo.models[0]
     const gl = this.context.gl
 
     mat4.identity(this.modelMatrix)
     this.shader.setModelMatrix(gl, this.modelMatrix)
-
-    for (let j = 0; j < model.faces.length; ++j) {
-      const face = model.faces[j]
-      gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-      gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-    }
+    this.drawModel(gl, model)
   }
 
   private renderOpaqueEntities(camera: Camera, entities: any[]) {
@@ -534,11 +566,7 @@ export class WorldScene {
         mat4.translate(mmx, mmx, origin)
         shader.setModelMatrix(gl, mmx)
 
-        for (let j = 0; j < model.faces.length; ++j) {
-          const face = model.faces[j]
-          gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-          gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-        }
+        this.drawModel(gl, model)
       } else if (entity.model.indexOf('.spr') > -1) {
         const texture = this.textures.find((a) => a.name === entity.model)
         const sprite = this.sprites[entity.model]
@@ -607,44 +635,21 @@ export class WorldScene {
           switch (renderMode) {
             case RenderMode.Normal: {
               shader.setOpacity(gl, 1)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               break
             }
-            case RenderMode.Color: {
-              // TODO: not properly implemented
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              break
-            }
-            case RenderMode.Texture: {
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              break
-            }
-            case RenderMode.Glow: {
-              // TODO: not properly implemented
-              gl.blendFunc(gl.SRC_ALPHA, gl.DST_ALPHA)
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-              break
-            }
+            case RenderMode.Color:
+            case RenderMode.Texture:
             case RenderMode.Solid: {
-              // TODO: not properly implemented
               shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               break
             }
+            case RenderMode.Glow:
             case RenderMode.Additive: {
               gl.blendFunc(gl.SRC_ALPHA, gl.DST_ALPHA)
               shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
               break
             }
@@ -689,60 +694,22 @@ export class WorldScene {
         switch (renderMode) {
           case RenderMode.Normal: {
             shader.setOpacity(gl, 1)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
+            this.drawModel(gl, model)
             break
           }
-          case RenderMode.Color: {
-            // TODO: not properly implemented
-            shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
-            break
-          }
-          case RenderMode.Texture: {
-            shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
-            break
-          }
-          case RenderMode.Glow: {
-            // TODO: not properly implemented
-            shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
-            break
-          }
+          case RenderMode.Color:
+          case RenderMode.Texture:
+          case RenderMode.Glow:
           case RenderMode.Solid: {
             // TODO: not properly implemented
             shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
+            this.drawModel(gl, model)
             break
           }
           case RenderMode.Additive: {
             gl.blendFunc(gl.SRC_ALPHA, gl.DST_ALPHA)
             shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-            for (let j = 0; j < model.faces.length; ++j) {
-              const face = model.faces[j]
-              gl.bindTexture(gl.TEXTURE_2D, this.textures[face.textureIndex].handle)
-              gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-            }
+            this.drawModel(gl, model)
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             break
           }
@@ -815,44 +782,21 @@ export class WorldScene {
           switch (renderMode) {
             case RenderMode.Normal: {
               shader.setOpacity(gl, 1)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               break
             }
-            case RenderMode.Color: {
-              // TODO: not properly implemented
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              break
-            }
-            case RenderMode.Texture: {
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              break
-            }
-            case RenderMode.Glow: {
-              // TODO: not properly implemented
-              gl.blendFunc(gl.SRC_ALPHA, gl.DST_ALPHA)
-              shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-              gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-              break
-            }
+            case RenderMode.Color:
+            case RenderMode.Texture:
             case RenderMode.Solid: {
-              // TODO: not properly implemented
               shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               break
             }
+            case RenderMode.Glow:
             case RenderMode.Additive: {
               gl.blendFunc(gl.SRC_ALPHA, gl.DST_ALPHA)
               shader.setOpacity(gl, (entity.renderamt || 255) / 255)
-              gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-              gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
+              this.drawEntityModel(gl, texture)
               gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
               break
             }
