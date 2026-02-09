@@ -27,6 +27,10 @@ export function SettingsButton(props: { game: Game }) {
     props.game.changeShowKeys()
   }
 
+  const onFullbrightClick = () => {
+    props.game.changeFullbright()
+  }
+
   return (
     <div classList={{ 'hlv-settings': true, open: isOpen() }}>
       <button type="button" class="hlv-button" onClick={() => setIsOpen(!isOpen())}>
@@ -83,6 +87,15 @@ export function SettingsButton(props: { game: Game }) {
           }}
           onClick={() => onShowKeysClick()}>
           Show keys
+        </button>
+        <button
+          type="button"
+          classList={{
+            'hlv-settings-menu-item': true,
+            selected: props.game.fullbright
+          }}
+          onClick={() => onFullbrightClick()}>
+          Full bright
         </button>
       </div>
     </div>

@@ -102,6 +102,7 @@ export class Game {
   mode: PlayerMode
   pointerLocked = false
   showKeys = true
+  fullbright = false
 
   touch: Touch = new Touch()
   mouse: Mouse = new Mouse()
@@ -218,6 +219,11 @@ export class Game {
   changeShowKeys() {
     this.showKeys = !this.showKeys
     this.events.emit('showkeyschange', this.showKeys)
+  }
+
+  changeFullbright() {
+    this.fullbright = !this.fullbright
+    this.worldScene.setFullbright(this.fullbright)
   }
 
   onLoadAll = (loader: Loader) => {

@@ -83,6 +83,10 @@ export class WorldScene {
     this.bsp = bsp
   }
 
+  setFullbright(enabled: boolean) {
+    this.shader.setFullbright(this.context.gl, enabled ? 1.0 : 0.0)
+  }
+
   private fillBuffer(bsp: Bsp) {
     const gl = this.context.gl
     const models = bsp.models
