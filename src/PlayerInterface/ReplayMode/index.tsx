@@ -55,7 +55,7 @@ export function ReplayMode(props: { class: string; game: Game; root: Element; vi
             <VolumeButton onClick={() => onVolumeClick()} />
             <VolumeControl game={props.game} />
           </Show>
-          <Time player={props.game.player} />
+          <Time game={props.game} />
         </div>
 
         <div class="hlv-buttons-right">
