@@ -102,6 +102,7 @@ export class Game {
   mode: PlayerMode
   pointerLocked = false
   showKeys = true
+  showTimer = true
   fullbright = false
 
   touch: Touch = new Touch()
@@ -219,6 +220,11 @@ export class Game {
   changeShowKeys() {
     this.showKeys = !this.showKeys
     this.events.emit('showkeyschange', this.showKeys)
+  }
+
+  changeShowTimer() {
+    this.showTimer = !this.showTimer
+    this.events.emit('showtimerchange', this.showTimer)
   }
 
   changeFullbright() {

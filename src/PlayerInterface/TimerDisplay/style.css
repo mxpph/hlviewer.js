@@ -1,0 +1,18 @@
+.hlv-timer-display {
+  font-family: sans-serif;
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  opacity: 0;
+  paint-order: stroke fill;
+  font-size: 1em;
+  -webkit-text-stroke: 4px rgba(0, 0, 0, 0.80);
+}
+
+
+.hlv-timer-display.visible {
+  opacity: 80%;
+  z-index: 30;
+}

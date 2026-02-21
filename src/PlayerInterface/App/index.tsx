@@ -8,6 +8,7 @@ import { GameStateContext } from '../GameState'
 import { type Game, PlayerMode } from '../../Game'
 import './style.css'
 import { KeyDisplay } from '../KeyDisplay'
+import { TimerDisplay } from '../TimerDisplay'
 
 export function App(props: { game: Game; root: Element }) {
   let screen: HTMLButtonElement | null = null
@@ -26,6 +27,7 @@ export function App(props: { game: Game; root: Element }) {
     isPlaying: props.game.player.isPlaying,
     isPaused: props.game.player.isPaused,
     showKeys: props.game.showKeys,
+    showTimer: props.game.showTimer,
   })
 
   onMount(() => {
@@ -49,6 +51,10 @@ export function App(props: { game: Game; root: Element }) {
       setGameState({ volume: props.game.soundSystem.getVolume() })
     })
     const offShowKeys = game.events.on('showkeyschange', (showKeys: boolean) => setGameState({ showKeys }))
+    const offShowTimer = game.events.on('showtimerchange', (showTimer: boolean) => {
+      console.log(showTimer)
+      setGameState({ showTimer })
+    })
 
     let interval: number
     const onPlay = () => {
@@ -84,6 +90,7 @@ export function App(props: { game: Game; root: Element }) {
       offStop?.()
       offVolumeChange?.()
       offShowKeys?.()
+      offShowTimer?.()
       offPlayTimer?.()
       offPauseTimer?.()
       offStopTimer?.()
@@ -260,6 +267,8 @@ export function App(props: { game: Game; root: Element }) {
         <Loading game={props.game} visible={isLoading()} />
 
         <KeyDisplay game={props.game} visible={gameState.showKeys && gameState.isPlaying} />
+
+        <TimerDisplay visible={gameState.showTimer && gameState.isPlaying} />
 
         <button
           type="button"
