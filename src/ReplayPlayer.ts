@@ -183,13 +183,13 @@ export class ReplayPlayer {
     const endTime = this.currentTime + dt * this.speed
     let buttons = 0
 
+    let frame: HlkzFrame
     while (this.currentTick < frameData.length) {
-      const frame = frameData[this.currentTick++]
-      if (frame.gametime <= endTime) {
+      frame = frameData[this.currentTick++]
+      if (frame.gametime > endTime) {
         this.state.feedHlkzFrame(frame)
         this.currentTime = frame.gametime
         buttons = frame.buttons
-      } else {
         break
       }
     }
