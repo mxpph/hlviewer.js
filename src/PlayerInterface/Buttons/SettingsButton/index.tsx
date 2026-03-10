@@ -23,6 +23,18 @@ export function SettingsButton(props: { game: Game }) {
     props.game.changeMode(PlayerMode.REPLAY)
   }
 
+  const onShowKeysClick = () => {
+    props.game.changeShowKeys()
+  }
+
+  const onFullbrightClick = () => {
+    props.game.changeFullbright()
+  }
+
+  const onShowTimerClick = () => {
+    props.game.changeShowTimer()
+  }
+
   return (
     <div classList={{ 'hlv-settings': true, open: isOpen() }}>
       <button type="button" class="hlv-button" onClick={() => setIsOpen(!isOpen())}>
@@ -69,6 +81,34 @@ export function SettingsButton(props: { game: Game }) {
           onClick={() => onFreeModeClick()}
         >
           Free Move
+        </button>
+        <span class="hlv-settings-menu-title">Display</span>
+        <button
+          type="button"
+          classList={{
+            'hlv-settings-menu-item': true,
+            selected: props.game.showKeys
+          }}
+          onClick={() => onShowKeysClick()}>
+          Show keys
+        </button>
+        <button
+          type="button"
+          classList={{
+            'hlv-settings-menu-item': true,
+            selected: props.game.showTimer
+          }}
+          onClick={() => onShowTimerClick()}>
+          Show timer
+        </button>
+        <button
+          type="button"
+          classList={{
+            'hlv-settings-menu-item': true,
+            selected: props.game.fullbright
+          }}
+          onClick={() => onFullbrightClick()}>
+          Full bright
         </button>
       </div>
     </div>

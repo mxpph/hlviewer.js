@@ -145,6 +145,11 @@ const readFrame = (r: Reader, deltaDecoders: any, customMessages: any) => {
   return frame
 }
 
+export enum ReplayType {
+  DEMO,
+  HLKZ,
+}
+
 export class Replay {
   header: any
   mapName: string

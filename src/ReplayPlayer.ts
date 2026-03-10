@@ -1,8 +1,9 @@
 import { glMatrix } from 'gl-matrix'
 import { createNanoEvents, type Emitter as EventEmitter } from 'nanoevents'
 import type { Game } from './Game'
-import { Replay } from './Replay/Replay'
+import { Replay, ReplayType } from './Replay/Replay'
 import { ReplayState } from './Replay/ReplayState'
+import { HlkzFrame } from './Parsers/Hlkz'
 
 const updateGame = (game: Game, state: ReplayState) => {
   game.camera.position[0] = state.cameraPos[0]
@@ -13,10 +14,16 @@ const updateGame = (game: Game, state: ReplayState) => {
   game.camera.rotation[2] = glMatrix.toRadian(state.cameraRot[2])
 }
 
+const updateGameAndButtons = (game: Game, state: ReplayState, events: EventEmitter, buttons: number) => {
+  updateGame(game, state);
+  events.emit('keyspressed', buttons)
+}
+
 export class ReplayPlayer {
   game: Game
   state: ReplayState
   replay: any
+  replayType: ReplayType
   events: EventEmitter
 
   currentMap = 0
@@ -32,6 +39,7 @@ export class ReplayPlayer {
     this.game = game
     this.state = new ReplayState()
     this.replay = null
+    this.replayType = ReplayType.DEMO
     this.events = createNanoEvents()
   }
 
@@ -45,15 +53,16 @@ export class ReplayPlayer {
     this.isPaused = false
     this.speed = 1
 
-    if (this.replay) {
+    if (this.replay && this.replayType == ReplayType.DEMO) {
       const firstChunk = this.replay.maps[0].chunks[0]
       firstChunk.reader.seek(0)
       this.state = firstChunk.state.clone()
     }
   }
 
-  changeReplay(replay: Replay) {
+  changeReplay(replay: Replay, replayType: ReplayType) {
     this.replay = replay
+    this.replayType = replayType;
     this.reset()
   }
 
@@ -90,7 +99,31 @@ export class ReplayPlayer {
 
   seek(value: number) {
     const t = Math.max(0, Math.min(this.replay.length, value))
+    if (this.replayType == ReplayType.DEMO) {
+      this.seekDemo(t)
+    } else {
+      this.seekHlkz(t)
+    }
+  }
 
+  private seekHlkz(t: number) {
+    const frames: HlkzFrame[] = this.replay.data
+    let buttons = 0
+    for (const [i, frame] of frames.entries()) {
+      if (frame.gametime <= t) {
+        this.state.feedHlkzFrame(frame)
+      } else {
+        this.currentTick = i
+        this.currentTime = frame.gametime
+        buttons = frame.buttons
+        break
+      }
+    }
+    this.events.emit('seek', t)
+    updateGameAndButtons(this.game, this.state, this.events, buttons)
+  }
+
+  private seekDemo(t: number) {
     const maps = this.replay.maps
     for (let i = 0; i < maps.length; ++i) {
       const chunks = maps[i].chunks
@@ -134,6 +167,41 @@ export class ReplayPlayer {
   }
 
   update(dt: number) {
+    if (this.replayType == ReplayType.DEMO) {
+      this.updateDemo(dt)
+    } else {
+      this.updateHlkz(dt)
+    }
+  }
+
+  private updateHlkz(dt: number) {
+    if (!this.isPlaying || this.isPaused) {
+      return
+    }
+
+    const frameData: HlkzFrame[] = this.replay.data
+    const endTime = this.currentTime + dt * this.speed
+    let buttons = 0
+
+    let frame: HlkzFrame
+    while (this.currentTick < frameData.length) {
+      frame = frameData[this.currentTick++]
+      if (frame.gametime > endTime) {
+        this.state.feedHlkzFrame(frame)
+        this.currentTime = frame.gametime
+        buttons = frame.buttons
+        break
+      }
+    }
+
+    updateGameAndButtons(this.game, this.state, this.events, buttons);
+    this.currentTime = endTime
+    if (this.currentTick == frameData.length) {
+      this.stop()
+    }
+  }
+
+  private updateDemo(dt: number) {
     if (!this.isPlaying || this.isPaused) {
       return
     }

@@ -1,3 +1,4 @@
+import { Show } from 'solid-js'
 import { Time } from '../Time'
 import type { Game } from '../../Game'
 import { Timeline } from '../Timeline'
@@ -10,6 +11,7 @@ import { SpeedUpButton } from '../Buttons/SpeedUpButton'
 import { SpeedDownButton } from '../Buttons/SpeedDownButton'
 import { SettingsButton } from '../Buttons/SettingsButton'
 import { FullscreenButton } from '../Buttons/FullscreenButton'
+import { ReplayType } from '../../Replay/Replay'
 
 export function ReplayMode(props: { class: string; game: Game; root: Element; visible: boolean }) {
   const gameState = useGameState()
@@ -49,9 +51,11 @@ export function ReplayMode(props: { class: string; game: Game; root: Element; vi
           <SpeedUpButton onClick={() => onSpeedUp()} />
           <div />
           <div />
-          <VolumeButton onClick={() => onVolumeClick()} />
-          <VolumeControl game={props.game} />
-          <Time player={props.game.player} />
+          <Show when={props.game.player.replayType == ReplayType.DEMO}>
+            <VolumeButton onClick={() => onVolumeClick()} />
+            <VolumeControl game={props.game} />
+          </Show>
+          <Time game={props.game} />
         </div>
 
         <div class="hlv-buttons-right">

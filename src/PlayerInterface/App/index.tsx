@@ -7,6 +7,8 @@ import { Fullscreen } from '../../Fullscreen'
 import { GameStateContext } from '../GameState'
 import { type Game, PlayerMode } from '../../Game'
 import './style.css'
+import { KeyDisplay } from '../KeyDisplay'
+import { TimerDisplay } from '../TimerDisplay'
 
 export function App(props: { game: Game; root: Element }) {
   let screen: HTMLButtonElement | null = null
@@ -23,7 +25,9 @@ export function App(props: { game: Game; root: Element }) {
     time: props.game.player.currentTime,
     volume: props.game.soundSystem.getVolume(),
     isPlaying: props.game.player.isPlaying,
-    isPaused: props.game.player.isPaused
+    isPaused: props.game.player.isPaused,
+    showKeys: props.game.showKeys,
+    showTimer: props.game.showTimer,
   })
 
   onMount(() => {
@@ -45,6 +49,11 @@ export function App(props: { game: Game; root: Element }) {
     const offStop = props.game.player.events.on('stop', () => setGameState({ isPlaying: false, isPaused: false }))
     const offVolumeChange = props.game.soundSystem.events.on('volumeChange', () => {
       setGameState({ volume: props.game.soundSystem.getVolume() })
+    })
+    const offShowKeys = game.events.on('showkeyschange', (showKeys: boolean) => setGameState({ showKeys }))
+    const offShowTimer = game.events.on('showtimerchange', (showTimer: boolean) => {
+      console.log(showTimer)
+      setGameState({ showTimer })
     })
 
     let interval: number
@@ -80,6 +89,8 @@ export function App(props: { game: Game; root: Element }) {
       offPause?.()
       offStop?.()
       offVolumeChange?.()
+      offShowKeys?.()
+      offShowTimer?.()
       offPlayTimer?.()
       offPauseTimer?.()
       offStopTimer?.()
@@ -254,6 +265,10 @@ export function App(props: { game: Game; root: Element }) {
         <div class="hlv-title">{title()}</div>
 
         <Loading game={props.game} visible={isLoading()} />
+
+        <KeyDisplay game={props.game} visible={gameState.showKeys && gameState.isPlaying} />
+
+        <TimerDisplay visible={gameState.showTimer && gameState.isPlaying} />
 
         <button
           type="button"

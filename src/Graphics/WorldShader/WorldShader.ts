@@ -8,6 +8,7 @@ precision highp float;
 uniform sampler2D diffuse;
 uniform sampler2D lightmap;
 uniform float opacity;
+uniform float fullbright;
 
 varying vec2 vTexCoord;
 varying vec2 vLightmapCoord;
@@ -16,7 +17,11 @@ void main(void) {
   vec4 diffuseColor = texture2D(diffuse, vTexCoord);
   vec4 lightColor = texture2D(lightmap, vLightmapCoord);
 
-  gl_FragColor = vec4(diffuseColor.rgb * lightColor.rgb, diffuseColor.a * opacity);
+  vec3 lightmappedRGB = pow(diffuseColor.rgb * lightColor.rgb, vec3(0.85));
+  vec3 fullbrightRGB = diffuseColor.rgb;
+  vec3 finalRGB = mix(lightmappedRGB, fullbrightRGB, fullbright);
+
+  gl_FragColor = vec4(finalRGB, diffuseColor.a * opacity);
 }`
 
 const vertexSrc = `#ifdef GL_ES
@@ -50,7 +55,8 @@ export class MainShader {
       'projectionMatrix',
       'diffuse',
       'lightmap',
-      'opacity'
+      'opacity',
+      'fullbright',
     ]
     const program = context.createProgram({
       vertexShaderSrc: vertexSrc,
@@ -76,6 +82,7 @@ export class MainShader {
   private uDiffuse: WebGLUniformLocation
   private uLightmap: WebGLUniformLocation
   private uOpacity: WebGLUniformLocation
+  private uFullbright: WebGLUniformLocation
 
   private constructor(program: Program) {
     this.program = program.handle
@@ -88,6 +95,7 @@ export class MainShader {
     this.uDiffuse = program.uniforms.diffuse
     this.uLightmap = program.uniforms.lightmap
     this.uOpacity = program.uniforms.opacity
+    this.uFullbright = program.uniforms.fullbright
   }
 
   useProgram(gl: WebGLRenderingContext) {
@@ -116,6 +124,10 @@ export class MainShader {
 
   setOpacity(gl: WebGLRenderingContext, val: number) {
     gl.uniform1f(this.uOpacity, val)
+  }
+
+  setFullbright(gl: WebGLRenderingContext, val: number) {
+    gl.uniform1f(this.uFullbright, val)
   }
 
   enableVertexAttribs(gl: WebGLRenderingContext) {

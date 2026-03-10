@@ -2,7 +2,7 @@ import { createNanoEvents, type Emitter as EventEmitter } from 'nanoevents'
 import type { Bsp } from './Bsp'
 import type { Sound } from './Sound'
 import type { Config } from './Config'
-import type { Replay } from './Replay/Replay'
+import type { Replay, ReplayType } from './Replay/Replay'
 import * as Time from './Time'
 import { Loader } from './Loader'
 import { Mouse } from './Input/Mouse'
@@ -101,6 +101,9 @@ export class Game {
   title = ''
   mode: PlayerMode
   pointerLocked = false
+  showKeys = true
+  showTimer = true
+  fullbright = false
 
   touch: Touch = new Touch()
   mouse: Mouse = new Mouse()
@@ -192,10 +195,10 @@ export class Game {
     this.camera.rotation[2] = 0
   }
 
-  changeReplay(replay: Replay) {
+  changeReplay(replay: Replay, replayType: ReplayType) {
     this.events.emit('prereplaychange', this, replay)
 
-    this.player.changeReplay(replay)
+    this.player.changeReplay(replay, replayType)
 
     this.events.emit('postreplaychange', this, replay)
   }
@@ -214,9 +217,24 @@ export class Game {
     return this.title
   }
 
+  changeShowKeys() {
+    this.showKeys = !this.showKeys
+    this.events.emit('showkeyschange', this.showKeys)
+  }
+
+  changeShowTimer() {
+    this.showTimer = !this.showTimer
+    this.events.emit('showtimerchange', this.showTimer)
+  }
+
+  changeFullbright() {
+    this.fullbright = !this.fullbright
+    this.worldScene.setFullbright(this.fullbright)
+  }
+
   onLoadAll = (loader: Loader) => {
     if (loader?.replay) {
-      this.changeReplay(loader.replay.data)
+      this.changeReplay(loader.replay.data, loader.replayType)
       this.changeMode(PlayerMode.REPLAY)
     }
 
@@ -400,8 +418,8 @@ export class Game {
 
   onMouseMove = (e: MouseEvent) => {
     if (this.pointerLocked) {
-      this.mouse.delta[0] = e.movementX * 0.5 // mul 0.5 to lower sensitivity
-      this.mouse.delta[1] = e.movementY * 0.5 //
+      this.mouse.delta[0] = e.movementX
+      this.mouse.delta[1] = e.movementY
 
       this.mouse.position[0] = e.pageX
       this.mouse.position[1] = e.pageY
