@@ -12,7 +12,8 @@ export enum ShaderType {
 export class Context {
   public static init(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
-      alpha: false
+      alpha: false,
+      antialias: false
     })
     if (!gl) {
       console.error('Failed to get WebGL context')

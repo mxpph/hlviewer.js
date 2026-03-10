@@ -5,13 +5,8 @@ const fragmentSrc = `#ifdef GL_ES
 precision highp float;
 #endif
 
-uniform sampler2D diffuse;
-
-varying vec2 vTexCoord;
-
 void main(void) {
-  vec4 diffuseColor = texture2D(diffuse, vTexCoord);
-  gl_FragColor = vec4(diffuseColor.rgb, 1.0);
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }`
 
 const vertexSrc = `#ifdef GL_ES
@@ -19,22 +14,18 @@ precision highp float;
 #endif
 
 attribute vec3 position;
-attribute vec2 texCoord;
-
-varying vec2 vTexCoord;
 
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 
 void main(void) {
-  vTexCoord = texCoord;
-  gl_Position = projectionMatrix * viewMatrix * vec4(position, 1);
+  gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`
 
 export class SkyShader {
   static init(context: Context): SkyShader | null {
-    const attributeNames = ['position', 'texCoord']
-    const uniformNames: string[] = ['viewMatrix', 'projectionMatrix', 'diffuse']
+    const attributeNames = ['position']
+    const uniformNames: string[] = ['viewMatrix', 'projectionMatrix']
     const program = context.createProgram({
       vertexShaderSrc: vertexSrc,
       fragmentShaderSrc: fragmentSrc,
@@ -51,18 +42,14 @@ export class SkyShader {
 
   private program: WebGLProgram
   private aPosition: number
-  private aTexCoord: number
   private uViewMx: WebGLUniformLocation
   private uProjectionMx: WebGLUniformLocation
-  private uDiffuse: WebGLUniformLocation
 
   private constructor(program: Program) {
     this.program = program.handle
     this.aPosition = program.attributes.position
-    this.aTexCoord = program.attributes.texCoord
     this.uViewMx = program.uniforms.viewMatrix
     this.uProjectionMx = program.uniforms.projectionMatrix
-    this.uDiffuse = program.uniforms.diffuse
   }
 
   useProgram(gl: WebGLRenderingContext) {
@@ -77,17 +64,12 @@ export class SkyShader {
     gl.uniformMatrix4fv(this.uProjectionMx, false, matrix)
   }
 
-  setDiffuse(gl: WebGLRenderingContext, value: number) {
-    gl.uniform1i(this.uDiffuse, value)
-  }
-
   enableVertexAttribs(gl: WebGLRenderingContext) {
     gl.enableVertexAttribArray(this.aPosition)
-    gl.enableVertexAttribArray(this.aTexCoord)
   }
 
   setVertexAttribPointers(gl: WebGLRenderingContext) {
+    // The stride remains 5 * 4 because the vertex array in SkyScene still interleaves texture coordinates
     gl.vertexAttribPointer(this.aPosition, 3, gl.FLOAT, false, 5 * 4, 0)
-    gl.vertexAttribPointer(this.aTexCoord, 2, gl.FLOAT, false, 5 * 4, 3 * 4)
   }
 }

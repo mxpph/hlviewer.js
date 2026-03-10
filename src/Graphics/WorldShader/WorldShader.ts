@@ -5,23 +5,15 @@ const fragmentSrc = `#ifdef GL_ES
 precision highp float;
 #endif
 
-uniform sampler2D diffuse;
-uniform sampler2D lightmap;
-uniform float opacity;
-uniform float fullbright;
-
-varying vec2 vTexCoord;
-varying vec2 vLightmapCoord;
+uniform float cameraNear;
+uniform float cameraFar;
 
 void main(void) {
-  vec4 diffuseColor = texture2D(diffuse, vTexCoord);
-  vec4 lightColor = texture2D(lightmap, vLightmapCoord);
-
-  vec3 lightmappedRGB = pow(diffuseColor.rgb * lightColor.rgb, vec3(0.85));
-  vec3 fullbrightRGB = diffuseColor.rgb;
-  vec3 finalRGB = mix(lightmappedRGB, fullbrightRGB, fullbright);
-
-  gl_FragColor = vec4(finalRGB, diffuseColor.a * opacity);
+  float ndcZ = gl_FragCoord.z * 2.0 - 1.0;
+  float linearDepth = (2.0 * cameraNear * cameraFar) / (cameraFar + cameraNear - ndcZ * (cameraFar - cameraNear));
+  float normalizedDepth = (linearDepth - cameraNear) / (cameraFar - cameraNear);
+  float displayDepth = 1.0 - normalizedDepth;
+  gl_FragColor = vec4(displayDepth, displayDepth, displayDepth, 1.0);
 }`
 
 const vertexSrc = `#ifdef GL_ES
@@ -29,34 +21,24 @@ precision highp float;
 #endif
 
 attribute vec3 position;
-attribute vec2 texCoord;
-attribute vec2 texCoord2;
-
-varying vec2 vTexCoord;
-varying vec2 vLightmapCoord;
 
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 
 void main(void) {
-  vTexCoord = texCoord;
-  vLightmapCoord = texCoord2;
-
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1);
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
 }`
 
 export class MainShader {
   static init(context: Context): MainShader | null {
-    const attributeNames = ['position', 'texCoord', 'texCoord2']
+    const attributeNames = ['position']
     const uniformNames: string[] = [
       'modelMatrix',
       'viewMatrix',
       'projectionMatrix',
-      'diffuse',
-      'lightmap',
-      'opacity',
-      'fullbright',
+      'cameraNear',
+      'cameraFar'
     ]
     const program = context.createProgram({
       vertexShaderSrc: vertexSrc,
@@ -74,28 +56,20 @@ export class MainShader {
 
   private program: WebGLProgram
   private aPosition: number
-  private aTexCoord: number
-  private aTexCoord2: number
   private uModelMx: WebGLUniformLocation
   private uViewMx: WebGLUniformLocation
   private uProjectionMx: WebGLUniformLocation
-  private uDiffuse: WebGLUniformLocation
-  private uLightmap: WebGLUniformLocation
-  private uOpacity: WebGLUniformLocation
-  private uFullbright: WebGLUniformLocation
+  private uCameraNear: WebGLUniformLocation
+  private uCameraFar: WebGLUniformLocation
 
   private constructor(program: Program) {
     this.program = program.handle
     this.aPosition = program.attributes.position
-    this.aTexCoord = program.attributes.texCoord
-    this.aTexCoord2 = program.attributes.texCoord2
     this.uModelMx = program.uniforms.modelMatrix
     this.uViewMx = program.uniforms.viewMatrix
     this.uProjectionMx = program.uniforms.projectionMatrix
-    this.uDiffuse = program.uniforms.diffuse
-    this.uLightmap = program.uniforms.lightmap
-    this.uOpacity = program.uniforms.opacity
-    this.uFullbright = program.uniforms.fullbright
+    this.uCameraNear = program.uniforms.cameraNear
+    this.uCameraFar = program.uniforms.cameraFar
   }
 
   useProgram(gl: WebGLRenderingContext) {
@@ -114,31 +88,24 @@ export class MainShader {
     gl.uniformMatrix4fv(this.uProjectionMx, false, matrix)
   }
 
-  setDiffuse(gl: WebGLRenderingContext, value: number) {
-    gl.uniform1i(this.uDiffuse, value)
+  setCameraBounds(gl: WebGLRenderingContext, near: number, far: number) {
+    gl.uniform1f(this.uCameraNear, near)
+    gl.uniform1f(this.uCameraFar, far)
   }
 
-  setLightmap(gl: WebGLRenderingContext, val: number) {
-    gl.uniform1i(this.uLightmap, val)
-  }
+  setDiffuse(gl: WebGLRenderingContext, value: number) { }
 
-  setOpacity(gl: WebGLRenderingContext, val: number) {
-    gl.uniform1f(this.uOpacity, val)
-  }
+  setLightmap(gl: WebGLRenderingContext, val: number) { }
 
-  setFullbright(gl: WebGLRenderingContext, val: number) {
-    gl.uniform1f(this.uFullbright, val)
-  }
+  setOpacity(gl: WebGLRenderingContext, val: number) { }
+
+  setFullbright(gl: WebGLRenderingContext, val: number) { }
 
   enableVertexAttribs(gl: WebGLRenderingContext) {
     gl.enableVertexAttribArray(this.aPosition)
-    gl.enableVertexAttribArray(this.aTexCoord)
-    gl.enableVertexAttribArray(this.aTexCoord2)
   }
 
   setVertexAttribPointers(gl: WebGLRenderingContext) {
     gl.vertexAttribPointer(this.aPosition, 3, gl.FLOAT, false, 7 * 4, 0)
-    gl.vertexAttribPointer(this.aTexCoord, 2, gl.FLOAT, false, 7 * 4, 3 * 4)
-    gl.vertexAttribPointer(this.aTexCoord2, 2, gl.FLOAT, false, 7 * 4, 5 * 4)
   }
 }

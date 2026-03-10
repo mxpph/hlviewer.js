@@ -262,7 +262,7 @@ export function App(props: { game: Game; root: Element }) {
           'mode-replay': gameState.mode === PlayerMode.REPLAY
         }}
       >
-        <div class="hlv-title">{title()}</div>
+        {/* <div class="hlv-title">{title()}</div> */}
 
         <Loading game={props.game} visible={isLoading()} />
 

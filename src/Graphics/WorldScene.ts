@@ -462,6 +462,7 @@ export class WorldScene {
 
     shader.setDiffuse(gl, 0)
     shader.setLightmap(gl, 1)
+    shader.setCameraBounds(gl, camera.near, camera.far);
 
     gl.activeTexture(gl.TEXTURE1)
     gl.bindTexture(gl.TEXTURE_2D, this.lightmap.handle)
@@ -470,27 +471,15 @@ export class WorldScene {
 
     const nonTriggerEntities = entities.filter(e => !e.classname.startsWith('trigger_'))
     const opaqueEntities = []
-    const transparentEntities = []
     for (const e of nonTriggerEntities) {
-      if (e.model) {
-        if (!e.rendermode || e.rendermode === RenderMode.Normal || e.rendermode === RenderMode.Solid) {
-          if (e.model[0] === '*') {
-            const model = this.sceneInfo.models[Number.parseInt(e.model.substr(1))]
-            if (model.isTransparent) {
-              transparentEntities.push(e)
-              continue
-            }
-          } else if (e.model.indexOf('.spr') > -1) {
-            transparentEntities.push(e)
+      if (e.model && (!e.rendermode || e.rendermode === RenderMode.Normal || e.rendermode === RenderMode.Solid)) {
+        if (e.model[0] === '*') {
+          const model = this.sceneInfo.models[Number.parseInt(e.model.substr(1))]
+          if (model.isTransparent) {
             continue
           }
-
-          opaqueEntities.push(e)
-        } else if (e.rendermode === RenderMode.Additive) {
-          transparentEntities.push(e)
-        } else {
-          transparentEntities.push(e)
         }
+        opaqueEntities.push(e)
       }
     }
 
@@ -498,46 +487,25 @@ export class WorldScene {
     this.renderWorldSpawn()
     this.renderOpaqueEntities(camera, opaqueEntities)
 
-    if (transparentEntities.length) {
-      gl.depthMask(false)
-      this.renderTransparentEntities(transparentEntities, camera)
-      gl.depthMask(true)
-    }
+    // if (transparentEntities.length) {
+    //   gl.depthMask(false)
+    //   this.renderTransparentEntities(transparentEntities, camera)
+    //   gl.depthMask(true)
+    // }
   }
 
   private drawModel(gl: WebGLRenderingContext, model: ModelInfo) {
     for (let j = 0; j < model.faces.length; ++j) {
       const face = model.faces[j]
       const texture = this.textures[face.textureIndex]
-      // Draw sky model into depth buffer only to prevent drawing things behind the skybox
-      if (texture.name === 'sky') {
-        gl.colorMask(false, false, false, false)
-        const old = gl.getParameter(gl.DEPTH_WRITEMASK)
-        gl.depthMask(true)
-        gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-        gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-        gl.colorMask(true, true, true, true)
-        gl.depthMask(old)
-      } else {
-        gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-        gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
-      }
+      gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+      gl.drawArrays(gl.TRIANGLES, face.offset / 7, face.length / 7)
     }
   }
 
   private drawEntityModel(gl: WebGLRenderingContext, texture: Texture) {
-    if (texture.name === 'sky') {
-      gl.colorMask(false, false, false, false)
-      const old = gl.getParameter(gl.DEPTH_WRITEMASK)
-      gl.depthMask(true)
-      gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-      gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-      gl.colorMask(true, true, true, true)
-      gl.depthMask(old)
-    } else {
-      gl.bindTexture(gl.TEXTURE_2D, texture.handle)
-      gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
-    }
+    gl.bindTexture(gl.TEXTURE_2D, texture.handle)
+    gl.drawArrays(gl.TRIANGLES, this.sceneInfo.models[this.sceneInfo.models.length - 1].offset / 7, 6)
   }
 
 

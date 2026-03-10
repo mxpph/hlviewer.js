@@ -101,8 +101,8 @@ export class Game {
   title = ''
   mode: PlayerMode
   pointerLocked = false
-  showKeys = true
-  showTimer = true
+  showKeys = false
+  showTimer = false
   fullbright = false
 
   touch: Touch = new Touch()
